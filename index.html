@@ -265,9 +265,11 @@ startApp(function () {
   setupTabs([['book', 'จองห้อง'], ['board', 'สถานะห้อง'], ['list', 'รายการ'], ['adc', 'Admit/DC', false], ['cal', 'ปฏิทิน']], BOOT.page);
   $('booker').value = S.user.name;
   $('inDate').min = b.today; $('outDate').min = b.today;
-  $('inDate').value = b.today; $('inTime').value = '14:00';
+  $('inDate').value = b.today; $('inTime').value = nowHM() < '14:00' ? '14:00' : nextHourHM();
   $('outDate').value = shiftDay(b.today, 1); $('outTime').value = '11:00';
-  ['inDate', 'inTime', 'outDate', 'outTime'].forEach(function (k) { $(k).onchange = loadRooms; });
+  $('inDate').onchange = function () { syncStayLimits(true); loadRooms(); };
+  ['inTime', 'outDate', 'outTime'].forEach(function (k) { $(k).onchange = function () { syncStayLimits(false); loadRooms(); }; });
+  syncStayLimits(false);
   $('branchChips').onclick = function (ev) { const x = ev.target.closest('[data-b]'); if (x) pickBranch(x.getAttribute('data-b')); };
   $('roomList').onclick = function (ev) { const x = ev.target.closest('[data-room]'); if (x && !x.disabled) { I.room = x.getAttribute('data-room'); renderRooms(); } };
   $('submitBtn').onclick = submitBooking;
@@ -298,6 +300,32 @@ function pickBranch(name) {
   if (TABS.current === 'cal') TABS.onShow.cal().catch(handleError);
 }
 
+/* ----- กันเลือกวัน/เวลาที่ผ่านมาแล้ว ----- */
+function nowHM() { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function nextHourHM() { const h = new Date().getHours() + 1; return h > 23 ? '23:59' : pad2(h) + ':00'; }
+function syncStayLimits(dateChanged) {
+  const today = S.boot.today;
+  if ($('inDate').value && $('inDate').value < today) $('inDate').value = today;
+  const isToday = $('inDate').value === today;
+  $('inTime').min = isToday ? nowHM() : '';
+  // วันที่เข้าพักวันนี้แต่เลือกเวลาที่ผ่านไปแล้ว → เลื่อนเป็นชั่วโมงถัดไป
+  if (isToday && $('inTime').value && $('inTime').value < nowHM()) {
+    $('inTime').value = nextHourHM();
+    toast('เวลา Check-in ผ่านมาแล้ว ปรับเป็น ' + $('inTime').value + ' ให้', true);
+  }
+  // วันที่ออกต้องไม่ก่อนวันที่เข้าพัก
+  $('outDate').min = $('inDate').value || today;
+  if ($('inDate').value && (!$('outDate').value || $('outDate').value < $('inDate').value || (dateChanged && $('outDate').value <= $('inDate').value))) {
+    $('outDate').value = shiftDay($('inDate').value, 1);
+  }
+}
+function stayPastMsg(r) {
+  if (!r.inDate) return '';
+  if (r.inDate < S.boot.today) return 'วันที่เข้าพักผ่านมาแล้ว';
+  if (r.inDate === S.boot.today && r.inTime && r.inTime < nowHM()) return 'เวลา Check-in ผ่านมาแล้ว กรุณาเลือกเวลาหลัง ' + nowHM();
+  return '';
+}
+
 function stayRange() {
   return { inDate: $('inDate').value, inTime: $('inTime').value, outDate: $('outDate').value, outTime: $('outTime').value };
 }
@@ -310,8 +338,9 @@ function nights(r) {
 async function loadRooms() {
   const r = stayRange();
   const n = nights(r);
-  const valid = r.inDate && r.inTime && r.outDate && r.outTime && (r.outDate + r.outTime) > (r.inDate + r.inTime);
-  $('nightsHint').textContent = valid ? 'รวม ' + Math.max(1, n) + ' คืน · ระบบตรวจห้องว่างตลอดช่วง Check-in ถึง Check-out' : 'Check-out ต้องหลัง Check-in';
+  const past = stayPastMsg(r);
+  const valid = !past && r.inDate && r.inTime && r.outDate && r.outTime && (r.outDate + r.outTime) > (r.inDate + r.inTime);
+  $('nightsHint').textContent = valid ? 'รวม ' + Math.max(1, n) + ' คืน · ระบบตรวจห้องว่างตลอดช่วง Check-in ถึง Check-out' : (past || 'Check-out ต้องหลัง Check-in');
   $('roomHint').textContent = valid ? 'ห้องว่างช่วง ' + thDate(r.inDate) + ' ' + r.inTime + ' – ' + thDate(r.outDate) + ' ' + r.outTime : '';
   $('roomList').innerHTML = '<div class="empty">กำลังโหลด…</div>';
   try {
@@ -342,6 +371,9 @@ function renderRooms() {
 }
 
 async function submitBooking() {
+  syncStayLimits(false);
+  const pastMsg = stayPastMsg(stayRange());
+  if (pastMsg) { loadRooms(); return toast(pastMsg, true); }
   if (!$('bookForm').reportValidity()) return;
   if (!I.room) return toast('ไม่มีห้องว่างในช่วงที่เลือก', true);
   const f = formData($('bookForm'));
