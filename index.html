@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+  <style>
+    :root { --accent: #0B6E5B; --accent-soft: #E9F3F1; --accent-tint: #D3E8E3; }
+    fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    legend { font-size: 13px; font-weight: 700; padding: 0 4px; }
+    /* iOS: ช่องวันที่/เวลาและ fieldset มีความกว้างขั้นต่ำ ทำให้ล้นกรอบ */
+    fieldset { min-width: 0; }
+    .grid2 > .field { min-width: 0; }
+    .field input[type=date], .field input[type=time] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; height: 50px; line-height: 50px; padding-top: 0; padding-bottom: 0; text-align: center; }
+    .field input::-webkit-date-and-time-value { text-align: center; line-height: 50px; margin: 0; }
+    .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .tile { min-height: 78px; border-radius: 12px; border: 2px solid #D3DAE3; background: #fff; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; }
+    .tile b { font-size: 17px; }
+    .tile span { font-size: 11px; }
+    .tile.ว่าง { border-color: #7CC79A; color: #1B6337; }
+    .tile.มีผู้ป่วย { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tile.จองแล้ว { background: #FCEFD9; border-color: #F0CE92; color: #6A4000; }
+    .tile.ทำความสะอาด { background: #ECEEF2; border-color: #D3DAE3; color: #3F4A58; }
+    .tag { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+    .tag.in { background: var(--accent-tint); color: var(--accent); }
+    .tag.out { background: #ECEEF2; color: #3F4A58; }
+    .tag.last { background: #FCEFD9; color: #6A4000; }
+    .bar4 { width: 100%; height: 4px; border-radius: 2px; background: #E3E8EE; overflow: hidden; display: flex; }
+    .bar4 i { display: block; height: 4px; background: var(--accent); }
+    .cal button.sel .bar4 { background: rgba(255,255,255,.35); }
+    .cal button.sel .bar4 i { background: #fff; }
+    .cal .mv { font-size: 8px; }
+  </style>
+<style>
+  :root {
+    --ink: #1B2430; --muted: #5B6675; --line: #E1E6EC; --field: #C7D0DB; --bg: #F3F5F8; --card: #FFFFFF;
+    --ok-bg: #E2F3E8; --ok-fg: #1B6337; --wait-bg: #FCEFD9; --wait-fg: #7A4A00;
+    --bad-bg: #FBE4E2; --bad-fg: #9A2A1F; --done-bg: #ECEEF2; --done-fg: #465061;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'IBM Plex Sans Thai', 'Sarabun', system-ui, sans-serif; -webkit-text-size-adjust: 100%; }
+  button, input, select, textarea { font-family: inherit; font-size: 15px; color: var(--ink); }
+  button { cursor: pointer; }
+  .hero { background: var(--accent); color: #fff; padding: 16px 16px 18px; }
+  .hero small { font-size: 12px; letter-spacing: .04em; }
+  .hero h1 { margin: 2px 0 0; font-size: 21px; }
+  .chip-user { margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; background: #fff; color: var(--ink); padding: 5px 12px 5px 5px; border-radius: 20px; font-size: 12px; max-width: 100%; }
+  .chip-user img, .chip-user span.ph { width: 22px; height: 22px; border-radius: 50%; background: #DCE4EC; flex: none; }
+  nav.tabs { position: sticky; top: 0; z-index: 5; display: flex; background: #fff; border-bottom: 1px solid #DADFE6; overflow-x: auto; }
+  nav.tabs button { flex: 1 0 auto; min-width: 64px; height: 46px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--muted); font-size: 13px; font-weight: 500; padding: 0 10px; }
+  nav.tabs button.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+  main { padding: 16px; display: flex; flex-direction: column; gap: 14px; max-width: 640px; margin: 0 auto; padding-bottom: 96px; }
+  section[data-tab] { display: none; flex-direction: column; gap: 14px; }
+  section[data-tab].on { display: flex; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .card.tight { padding: 12px 14px; gap: 6px; }
+  h2 { margin: 0; font-size: 15px; }
+  h2 .sub { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 13px; color: #3F4A58; }
+  .field label .opt { color: var(--muted); }
+  .field input, .field select, .field textarea { height: 44px; border: 1px solid var(--field); border-radius: 10px; padding: 0 12px; background: #fff; width: 100%; }
+  .field textarea { height: auto; min-height: 84px; padding: 10px 12px; resize: vertical; }
+  .field input[readonly] { background: #F7F9FB; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--field); background: #fff; font-size: 13px; font-weight: 600; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .opt-row { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; min-height: 52px; padding: 10px 14px; border-radius: 12px; border: 2px solid #D3DAE3; background: #fff; }
+  .opt-row.on { border-color: var(--accent); background: var(--accent-soft); }
+  .opt-row:disabled { background: #F3F4F6; opacity: .6; cursor: not-allowed; }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #9AA5B4; background: #fff; display: flex; align-items: center; justify-content: center; flex: none; }
+  .opt-row.on .radio { border-color: var(--accent); }
+  .opt-row.on .radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .t-strong { font-size: 15px; font-weight: 600; }
+  .t-meta { font-size: 12px; color: var(--muted); }
+  .pill { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 10px; white-space: nowrap; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pill.wait { background: var(--wait-bg); color: var(--wait-fg); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad-fg); }
+  .pill.done { background: var(--done-bg); color: var(--done-fg); }
+  .pill.info { background: var(--accent-tint); color: var(--accent); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .btn { height: 48px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; padding: 0 16px; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--field); }
+  .btn.small { height: 40px; font-size: 14px; }
+  .btn:disabled { opacity: .55; }
+  .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid #DADFE6; z-index: 6; display: none; }
+  .bar.on { display: block; }
+  .bar .btn { width: 100%; max-width: 608px; display: block; margin: 0 auto; }
+  .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; background: #E3E8EE; padding: 4px; border-radius: 12px; }
+  .seg button { height: 40px; border: 0; border-radius: 9px; background: transparent; color: #3F4A58; font-weight: 600; font-size: 14px; }
+  .seg button.on { background: #fff; color: var(--accent); }
+  .navrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .navrow h2 { text-align: center; font-size: 15px; }
+  .iconbtn { width: 44px; height: 44px; border: 1px solid #D3DAE3; background: #fff; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .cal .dow { font-size: 11px; color: var(--muted); text-align: center; }
+  .cal button { min-height: 58px; border-radius: 10px; border: 1px solid #E3E8EE; background: #fff; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; font-size: 13px; font-weight: 500; }
+  .cal button.has { background: var(--accent-soft); }
+  .cal button.today { border: 2px solid var(--accent); font-weight: 700; }
+  .cal button.sel { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+  .cal button .n { font-size: 9px; font-weight: 600; }
+  .cal .blank { visibility: hidden; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px 4px; text-align: center; }
+  .stat b { display: block; font-size: 18px; }
+  .stat span { font-size: 11px; color: var(--muted); }
+  .list-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #EEF1F5; align-items: center; }
+  .list-item:last-child { border-bottom: 0; }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 18px 8px; }
+  .foot { font-size: 11px; color: var(--muted); text-align: center; padding: 4px 16px 20px; }
+  #toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #1B2430; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; z-index: 50; max-width: 90vw; display: none; }
+  #toast.bad { background: #9A2A1F; }
+  #busy { position: fixed; inset: 0; background: rgba(255,255,255,.6); z-index: 40; display: none; align-items: center; justify-content: center; }
+  #busy.on { display: flex; }
+  #busy i { width: 34px; height: 34px; border-radius: 50%; border: 4px solid #D3DAE3; border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #fatal { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; text-align: center; flex-direction: column; gap: 12px; }
+  #fatal.on { display: flex; }
+  #fatal h2 { font-size: 18px; }
+  #fatal p { color: var(--muted); font-size: 14px; line-height: 1.6; max-width: 320px; }
+  .hidden { display: none !important; }
+</style>
+  <style>
+    /* ตัวหนังสือใหญ่ขึ้นทั้งหน้า */
+    button, input, select, textarea { font-size: 17px; }
+    .hero small { font-size: 14px; }
+    .hero h1 { font-size: 24px; }
+    .chip-user { font-size: 15px; }
+    .chip-user img, .chip-user span.ph { width: 26px; height: 26px; }
+    nav.tabs button { font-size: 15px; height: 50px; }
+    h2 { font-size: 18px; }
+    h2 .sub { font-size: 14px; }
+    .field label { font-size: 15px; }
+    .field input, .field select, .field textarea { height: 50px; }
+    .hint { font-size: 14px; }
+    .chip { font-size: 15px; min-height: 44px; }
+    .t-strong { font-size: 17px; }
+    .t-meta { font-size: 14px; }
+    .pill { font-size: 13px; }
+    .btn { font-size: 17px; height: 52px; }
+    .btn.small { font-size: 16px; height: 46px; }
+    .stat b { font-size: 22px; }
+    .stat span { font-size: 13px; }
+    .cal .dow { font-size: 13px; }
+    .cal button { font-size: 15px; }
+    .cal button .n { font-size: 11px; }
+    .empty { font-size: 15px; }
+    .foot { font-size: 12px; }
+    #toast { font-size: 16px; }
+    legend { font-size: 15px; }
+    .tile b { font-size: 20px; }
+    .tile span { font-size: 13px; }
+    .tag { font-size: 12px; }
+    article.bk { gap: 8px; }
+    article.bk .t-strong { font-size: 20px; }
+    article.bk .t-meta { font-size: 16px; line-height: 1.5; }
+    article.bk .pill { font-size: 15px; padding: 3px 11px; }
+  </style>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+<div id="app">
+  <div class="hero">
+    <small>โรงพยาบาล DERMASTER</small>
+    <h1>ระบบจองห้องพักผู้ป่วยใน</h1>
+    <div class="chip-user" id="userChip"><span class="ph"></span><span>กำลังโหลด…</span></div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="เมนู"></nav>
+
+  <main>
+    <div class="card tight" id="branchBox">
+      <h2>สาขา</h2>
+      <div class="chips" id="branchChips" role="group" aria-label="สาขา"></div>
+    </div>
+
+    <section data-tab="book">
+      <form id="bookForm" onsubmit="return false" autocomplete="off" style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h2>ห้อง <span class="sub" id="roomSub"></span></h2>
+          <p class="hint hidden" id="roomHint" style="margin:0"></p>
+          <div id="roomList" role="radiogroup" aria-label="เลือกห้อง" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div class="card tight" style="background:#F7F9FB">ห้องที่เลือก: <b id="roomLabel">—</b></div>
+        </div>
+        <div class="card">
+          <h2>ข้อมูลการจอง</h2>
+          <div class="field"><label for="customer">ชื่อลูกค้า</label><input id="customer" name="customer" maxlength="120" placeholder="ชื่อ-นามสกุลลูกค้า" required></div>
+          <fieldset>
+            <legend style="color:var(--accent)">Check-in</legend>
+            <div class="grid2">
+              <div class="field"><label for="inDate">วันที่เข้าพัก</label><input id="inDate" name="inDate" type="date" required></div>
+              <div class="field"><label for="inTime">เวลา</label><input id="inTime" name="inTime" type="time" required></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Check-out</legend>
+            <div class="grid2">
+              <div class="field"><label for="outDate">วันที่ออก</label><input id="outDate" name="outDate" type="date" required></div>
+              <div class="field"><label for="outTime">เวลา</label><input id="outTime" name="outTime" type="time" required></div>
+            </div>
+          </fieldset>
+          <p class="hint" id="nightsHint" style="margin:0"></p>
+          <div class="field"><label for="request">Special Request <span class="opt">(ไม่บังคับ)</span></label><textarea id="request" name="request" maxlength="500" placeholder="เช่น เตียงเสริมสำหรับญาติ อาหารมังสวิรัติ ห้องใกล้ Nurse Station"></textarea></div>
+        </div>
+        <div class="card"><div class="field"><label for="booker">ชื่อผู้จอง</label><input id="booker" name="booker" maxlength="120" required></div></div>
+      </form>
+    </section>
+
+    <section data-tab="board">
+      <div class="stats" id="boardStats"></div>
+      <p class="hint" id="boardHint" style="margin:0"></p>
+      <div class="board" id="boardGrid"></div>
+    </section>
+
+    <section data-tab="list"><div id="listBox"></div></section>
+
+    <section data-tab="adc"><div id="adcBox"></div></section>
+
+    <section data-tab="cal">
+      <div class="seg" role="group" aria-label="มุมมองปฏิทิน">
+        <button type="button" id="viewDay" class="on">รายวัน</button>
+        <button type="button" id="viewMonth">รายเดือน</button>
+      </div>
+      <div id="dayView" style="display:flex;flex-direction:column;gap:12px">
+        <div class="navrow">
+          <button type="button" class="iconbtn" id="dayPrev" aria-label="วันก่อนหน้า">‹</button>
+          <h2 id="dayTitle"></h2>
+          <button type="button" class="iconbtn" id="dayNext" aria-label="วันถัดไป">›</button>
+        </div>
+        <div class="stats" id="dayStats"></div>
+        <div class="card tight" id="dayRooms"></div>
+      </div>
+      <div id="monthView" class="hidden" style="flex-direction:column;gap:12px">
+        <div class="navrow">
+          <button type="button" class="iconbtn" id="monPrev" aria-label="เดือนก่อนหน้า">‹</button>
+          <h2 id="monTitle"></h2>
+          <button type="button" class="iconbtn" id="monNext" aria-label="เดือนถัดไป">›</button>
+        </div>
+        <div class="card"><div class="cal" id="monGrid"></div></div>
+        <p class="hint">ตัวเลข = ห้องมีผู้พัก / ห้องทั้งหมด · แถบ = อัตราการเข้าพัก · ↓ Check-in · ↑ Check-out · แตะวันที่เพื่อดูรายห้อง</p>
+      </div>
+    </section>
+  </main>
+  <div class="foot">เชื่อมข้อมูลกับ Google Sheet · IPD_Booking</div>
+  <div class="bar" data-for="book"><button type="button" class="btn" id="submitBtn">ยืนยันการจองห้องพัก</button></div>
+</div>
+
+<div id="fatal"><h2 id="fatalTitle"></h2><p id="fatalText"></p></div>
+<div id="busy"><i></i></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="core.js"></script>
+<script>
+const I = { branch: '', room: '', rooms: [], view: 'day', day: ymd(new Date()), calY: new Date().getFullYear(), calM: new Date().getMonth(), cache: {} };
+
+startApp(function () {
+  const b = S.boot;
+  if (!b.branches.length) return fatal('ยังไม่มีข้อมูลสาขา', 'กรุณาเพิ่มสาขาในชีต Branches (สถานะ Active)');
+  setupTabs([['book', 'จองห้อง'], ['board', 'สถานะห้อง'], ['list', 'รายการ'], ['adc', 'Admit/DC', b.isNurse], ['cal', 'ปฏิทิน']], BOOT.page);
+  $('booker').value = S.user.name;
+  $('inDate').min = b.today; $('outDate').min = b.today;
+  $('inDate').value = b.today; $('inTime').value = '14:00';
+  $('outDate').value = shiftDay(b.today, 1); $('outTime').value = '11:00';
+  ['inDate', 'inTime', 'outDate', 'outTime'].forEach(function (k) { $(k).onchange = loadRooms; });
+  $('branchChips').onclick = function (ev) { const x = ev.target.closest('[data-b]'); if (x) pickBranch(x.getAttribute('data-b')); };
+  $('roomList').onclick = function (ev) { const x = ev.target.closest('[data-room]'); if (x && !x.disabled) { I.room = x.getAttribute('data-room'); renderRooms(); } };
+  $('submitBtn').onclick = submitBooking;
+  $('viewDay').onclick = function () { setView('day'); };
+  $('viewMonth').onclick = function () { setView('month'); };
+  $('dayPrev').onclick = function () { I.day = shiftDay(I.day, -1); renderDay().catch(handleError); };
+  $('dayNext').onclick = function () { I.day = shiftDay(I.day, 1); renderDay().catch(handleError); };
+  $('monPrev').onclick = function () { shiftMonth(-1); };
+  $('monNext').onclick = function () { shiftMonth(1); };
+  TABS.onShow.book = function () { $('branchBox').classList.remove('hidden'); };
+  TABS.onShow.board = function () { $('branchBox').classList.remove('hidden'); return loadBoard(); };
+  TABS.onShow.list = function () { $('branchBox').classList.add('hidden'); return loadList(); };
+  TABS.onShow.adc = function () { $('branchBox').classList.add('hidden'); return loadQueue(); };
+  TABS.onShow.cal = function () { $('branchBox').classList.remove('hidden'); return I.view === 'day' ? renderDay() : renderMonthView(); };
+  I.firstRooms = b.rooms || null;
+  pickBranch(b.branches[0]);
+  if (TABS.onShow[TABS.current]) return TABS.onShow[TABS.current]();
+});
+
+function pickBranch(name) {
+  I.branch = name;
+  I.room = '';
+  I.cache = {};
+  $('branchChips').innerHTML = S.boot.branches.map(function (b) { return '<button type="button" class="chip' + (b === name ? ' on' : '') + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('');
+  $('roomSub').textContent = '· ' + name;
+  loadRooms();
+  if (TABS.current === 'board') loadBoard().catch(handleError);
+  if (TABS.current === 'cal') TABS.onShow.cal().catch(handleError);
+}
+
+function stayRange() {
+  return { inDate: $('inDate').value, inTime: $('inTime').value, outDate: $('outDate').value, outTime: $('outTime').value };
+}
+
+function nights(r) {
+  if (!r.inDate || !r.outDate) return 0;
+  return Math.round((parseYmd(r.outDate) - parseYmd(r.inDate)) / 86400000);
+}
+
+async function loadRooms() {
+  const r = stayRange();
+  const n = nights(r);
+  const valid = r.inDate && r.inTime && r.outDate && r.outTime && (r.outDate + r.outTime) > (r.inDate + r.inTime);
+  $('nightsHint').textContent = valid ? 'รวม ' + Math.max(1, n) + ' คืน · ระบบตรวจห้องว่างตลอดช่วง Check-in ถึง Check-out' : 'Check-out ต้องหลัง Check-in';
+  $('roomHint').textContent = valid ? 'ห้องว่างช่วง ' + thDate(r.inDate) + ' ' + r.inTime + ' – ' + thDate(r.outDate) + ' ' + r.outTime : '';
+  $('roomList').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+  try {
+    if (I.firstRooms && I.branch === S.boot.branches[0] && r.inDate === S.boot.today && r.inTime === '14:00' && r.outTime === '11:00') {
+      I.rooms = I.firstRooms;
+    } else {
+      I.rooms = await call('api_rooms', I.branch, valid ? r : {});
+    }
+    I.firstRooms = null;
+    if (I.room && !I.rooms.some(function (x) { return x.no === I.room && x.free; })) I.room = '';
+    if (!I.room) { const f = I.rooms.filter(function (x) { return x.free; })[0]; I.room = f ? f.no : ''; }
+    renderRooms();
+  } catch (e) { handleError(e); }
+}
+
+function renderRooms() {
+  if (!I.rooms.length) { $('roomList').innerHTML = '<div class="empty">สาขานี้ยังไม่มีห้องในชีต Rooms</div>'; $('roomLabel').textContent = '—'; return; }
+  const free = I.rooms.filter(function (x) { return x.free; }).length;
+  $('roomList').innerHTML = I.rooms.map(function (x) {
+    const on = x.no === I.room;
+    const label = on ? 'เลือกแล้ว' : x.free ? 'ว่าง' : 'ไม่ว่างช่วงนี้';
+    return '<button type="button" role="radio" aria-checked="' + on + '" class="opt-row' + (on ? ' on' : '') + '" data-room="' + esc(x.no) + '"' + (x.free ? '' : ' disabled') + '>' +
+      '<span class="radio"></span><span class="grow"><span style="font-size:16px;font-weight:700">ห้อง ' + esc(x.no) + '</span>' +
+      (x.price ? '<span class="t-meta">' + esc(x.price) + ' บาท/คืน</span>' : '') + '</span>' +
+      (on ? '<span class="pill info">เลือกแล้ว</span>' : x.free ? '<span class="pill ok">ว่าง</span>' : '<span class="pill done">' + esc(label) + '</span>') + '</button>';
+  }).join('');
+  $('roomLabel').textContent = I.room ? 'ห้อง ' + I.room : 'ไม่มีห้องว่าง';
+}
+
+async function submitBooking() {
+  if (!$('bookForm').reportValidity()) return;
+  if (!I.room) return toast('ไม่มีห้องว่างในช่วงที่เลือก', true);
+  const f = formData($('bookForm'));
+  f.branch = I.branch; f.room = I.room;
+  $('submitBtn').disabled = true;
+  busy(true);
+  try {
+    const r = await call('api_book', f);
+    toast('จองห้องพักเรียบร้อย · ' + r.id);
+    $('customer').value = ''; $('request').value = '';
+    I.cache = {};
+    await loadRooms();
+    showTab('list');
+    backToChat(1800);
+  } catch (e) { handleError(e); await loadRooms(); } finally { $('submitBtn').disabled = false; busy(false); }
+}
+
+/* ----- สถานะห้อง ----- */
+async function loadBoard() {
+  $('boardGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">กำลังโหลด…</div>';
+  const list = await call('api_board', I.branch);
+  const order = ['ว่าง', 'มีผู้ป่วย', 'จองแล้ว'];
+  $('boardStats').innerHTML = order.map(function (k) {
+    return '<div class="stat"><b>' + list.filter(function (x) { return x.status === k; }).length + '</b><span>' + k + '</span></div>';
+  }).join('');
+  $('boardHint').textContent = I.branch + ' · แตะห้องว่างเพื่อจอง';
+  $('boardGrid').innerHTML = list.length ? list.map(function (x) {
+    return '<button type="button" class="tile ' + esc(x.status) + '" data-room="' + esc(x.no) + '"' + (x.status === 'ว่าง' ? '' : ' aria-disabled="true"') + '>' +
+      '<b>' + esc(x.no) + '</b><span>' + esc(x.customer ? 'คุณ ' + x.customer : '') + '</span><span style="font-weight:700">' + esc(x.status) + '</span></button>';
+  }).join('') : '<div class="empty" style="grid-column:1/-1">ยังไม่มีห้อง</div>';
+  $('boardGrid').onclick = function (ev) {
+    const t = ev.target.closest('.tile.ว่าง');
+    if (t) { I.room = t.getAttribute('data-room'); showTab('book'); renderRooms(); }
+  };
+}
+
+/* ----- รายการจอง ----- */
+function bookingCard(b, buttons) {
+  return '<article class="card tight bk"><div class="row"><span class="t-meta">' + esc(b.id) + '</span>' + statusPill(b.status) + '</div>' +
+    '<div class="t-strong">คุณ ' + esc(b.customer) + '</div>' +
+    '<div class="t-meta">' + esc(b.branch) + ' · ห้อง ' + esc(b.room) + '</div>' +
+    '<div class="t-meta">Check-in ' + esc(thDate(b.inDate)) + ' ' + esc(b.inTime) + ' → Check-out ' + esc(thDate(b.outDate)) + ' ' + esc(b.outTime) + (b.nights !== '' ? ' · ' + esc(b.nights) + ' คืน' : '') + '</div>' +
+    (b.request ? '<div class="t-meta">Special Request: ' + esc(b.request) + '</div>' : '') +
+    '<div class="t-meta">ผู้จอง: ' + esc(b.booker) + '</div>' + (buttons || '') + '</article>';
+}
+
+async function loadList() {
+  $('listBox').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+  const list = await call('api_list');
+  const open = ['รอพยาบาลยืนยัน', 'ยืนยันแล้ว', 'Admit แล้ว'];
+  const cards = function (arr, emptyText) {
+    return arr.length ? arr.map(function (b) {
+      return bookingCard(b, b.canCancel ? '<button type="button" class="btn ghost small" data-act="cancel" data-id="' + esc(b.id) + '">ยกเลิกการจอง</button>' : '');
+    }).join('<div style="height:10px"></div>') : '<div class="empty">' + emptyText + '</div>';
+  };
+  const now = list.filter(function (b) { return open.indexOf(b.status) >= 0; });
+  const past = list.filter(function (b) { return open.indexOf(b.status) < 0; });
+  $('listBox').innerHTML =
+    '<h2 style="margin:4px 0 8px">การจองปัจจุบัน <span class="sub">· ' + now.length + ' รายการ</span></h2>' + cards(now, 'ไม่มีการจองที่ยังไม่จบ') +
+    '<div style="height:16px"></div>' +
+    '<h2 style="margin:4px 0 8px">ประวัติการจองของฉัน <span class="sub">· ' + past.length + ' รายการ</span></h2>' + cards(past, 'ยังไม่มีประวัติ');
+  $('listBox').onclick = onAction(loadList);
+}
+
+/* ----- Admit / Discharge (พยาบาล) ----- */
+async function loadQueue() {
+  $('adcBox').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+  const q = await call('api_queue');
+  const block = function (title, list, buttons) {
+    return '<h2 style="margin:4px 0 8px">' + title + ' <span class="sub">· ' + list.length + ' รายการ</span></h2>' +
+      (list.length ? list.map(function (b) { return bookingCard(b, buttons(b)); }).join('<div style="height:10px"></div>') : '<div class="empty">ไม่มีรายการ</div>');
+  };
+  $('adcBox').innerHTML =
+    block('รอยืนยันการจอง', q.pending, function (b) {
+      return '<div class="actions"><button type="button" class="btn ghost small" data-act="cancel" data-id="' + esc(b.id) + '">ยกเลิก</button><button type="button" class="btn small" data-act="confirm" data-id="' + esc(b.id) + '">ยืนยันการจอง</button></div>';
+    }) + '<div style="height:16px"></div>' +
+    block('รอ Admit (ถึงวัน Check-in)', q.admits, function (b) { return '<button type="button" class="btn small" data-act="admit" data-id="' + esc(b.id) + '">ยืนยันรับผู้ป่วยเข้าห้อง</button>'; }) + '<div style="height:16px"></div>' +
+    block('ผู้ป่วยในห้อง (Discharge)', q.discharges, function (b) { return '<button type="button" class="btn small" data-act="discharge" data-id="' + esc(b.id) + '">ยืนยันจำหน่ายผู้ป่วย</button>'; });
+  $('adcBox').onclick = async function (ev) {
+    const r = ev.target.closest('[data-ready]');
+    if (r) {
+      busy(true);
+      try { await call('api_roomReady', r.getAttribute('data-ready')); toast('ห้องพร้อมใช้งานแล้ว'); await loadQueue(); } catch (e) { handleError(e); } finally { busy(false); }
+      return;
+    }
+    return onAction(loadQueue)(ev);
+  };
+}
+
+function onAction(reload) {
+  return async function (ev) {
+    const x = ev.target.closest('[data-act]');
+    if (!x) return;
+    const act = x.getAttribute('data-act'), id = x.getAttribute('data-id');
+    const label = { cancel: 'ยกเลิกการจอง', confirm: 'ยืนยันการจอง', admit: 'Admit', discharge: 'Discharge' }[act];
+    // หน้าต่าง confirm() ถูกบล็อกในบางเบราว์เซอร์ของ LINE จึงใช้การแตะปุ่มซ้ำเพื่อยืนยันแทน
+    if (x.dataset.armed !== '1') {
+      x.dataset.armed = '1';
+      x.dataset.orig = x.textContent;
+      x.textContent = 'แตะอีกครั้งเพื่อ' + label;
+      setTimeout(function () { if (x.dataset.armed === '1') { x.dataset.armed = ''; x.textContent = x.dataset.orig; } }, 4000);
+      return;
+    }
+    x.dataset.armed = '';
+    busy(true);
+    try { await call('api_action', id, act); toast(label + ' เรียบร้อย'); I.cache = {}; await reload(); } catch (e) { handleError(e); } finally { busy(false); }
+  };
+}
+
+/* ----- ปฏิทิน ----- */
+function setView(v) {
+  I.view = v;
+  $('viewDay').classList.toggle('on', v === 'day');
+  $('viewMonth').classList.toggle('on', v === 'month');
+  $('dayView').classList.toggle('hidden', v !== 'day');
+  $('monthView').classList.toggle('hidden', v !== 'month');
+  $('monthView').style.display = v === 'month' ? 'flex' : '';
+  if (v === 'month') { const d = parseYmd(I.day); I.calY = d.getFullYear(); I.calM = d.getMonth(); renderMonthView().catch(handleError); } else renderDay().catch(handleError);
+}
+
+async function renderDay() {
+  $('dayTitle').textContent = thDayLabel(I.day);
+  $('dayRooms').innerHTML = '<div class="empty">กำลังโหลด…</div>';
+  const list = await call('api_day', I.branch, I.day);
+  const ins = list.filter(function (x) { return x.tags.some(function (t) { return t.indexOf('in:') === 0; }); }).length;
+  const outs = list.filter(function (x) { return x.tags.some(function (t) { return t.indexOf('out:') === 0; }); }).length;
+  const occ = list.filter(function (x) { return x.occupied; }).length;
+  $('dayStats').innerHTML = '<div class="stat"><b style="color:var(--accent)">' + ins + '</b><span>Check-in</span></div><div class="stat"><b>' + outs + '</b><span>Check-out</span></div>' +
+    '<div class="stat"><b>' + occ + '</b><span>มีผู้พัก</span></div><div class="stat"><b style="color:#1B6337">' + (list.length - occ) + '</b><span>ว่าง</span></div>';
+  $('dayRooms').innerHTML = list.length ? list.map(function (x) {
+    const tags = x.tags.map(function (t) {
+      if (t.indexOf('in:') === 0) return '<span class="tag in">↓ Check-in ' + esc(t.slice(3)) + '</span>';
+      if (t.indexOf('out:') === 0) return '<span class="tag out">↑ Check-out ' + esc(t.slice(4)) + '</span>';
+      return '<span class="tag last">ออกพรุ่งนี้</span>';
+    }).join(' ');
+    const pill = x.occupied ? statusPill(x.status === 'Admit แล้ว' ? 'มีผู้ป่วย' : 'จองแล้ว') : statusPill('ว่าง');
+    return '<div class="list-item"><b style="width:48px;flex:none;font-size:15px">' + esc(x.no) + '</b>' +
+      '<span class="grow"><span style="font-size:13px;font-weight:600">' + esc(x.customer ? 'คุณ ' + x.customer + (x.checkoutOnly ? ' · ออกวันนี้' : '') : '—') + '</span>' +
+      (tags ? '<span>' + tags + '</span>' : '') + '</span>' + pill + '</div>';
+  }).join('') : '<div class="empty">ยังไม่มีห้อง</div>';
+}
+
+async function renderMonthView() {
+  $('monTitle').textContent = monthTitle(I.calY, I.calM);
+  const key = I.calY + '-' + I.calM;
+  if (!I.cache[key]) I.cache[key] = await call('api_month', I.branch, I.calY, I.calM + 1);
+  const data = I.cache[key];
+  renderMonth($('monGrid'), I.calY, I.calM, I.day, function (ds) {
+    const d = data.days[ds] || { occ: 0, ins: 0, outs: 0 };
+    const pct = data.total ? Math.round(d.occ / data.total * 100) : 0;
+    const mv = (d.ins ? '↓' + d.ins : '') + (d.ins && d.outs ? ' ' : '') + (d.outs ? '↑' + d.outs : '');
+    return {
+      has: d.occ > 0, label: d.occ + '/' + data.total,
+      aria: 'มีผู้พัก ' + d.occ + ' จาก ' + data.total + ' ห้อง · Check-in ' + d.ins + ' · Check-out ' + d.outs,
+      extra: '<span class="bar4"><i style="width:' + pct + '%"></i></span><span class="mv">' + mv + '</span>'
+    };
+  }, function (ds) { I.day = ds; setView('day'); });
+}
+
+function shiftMonth(k) {
+  I.calM += k;
+  if (I.calM < 0) { I.calM = 11; I.calY -= 1; }
+  if (I.calM > 11) { I.calM = 0; I.calY += 1; }
+  renderMonthView().catch(handleError);
+}
+</script>
+</body>
+</html>
