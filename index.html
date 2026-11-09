@@ -262,7 +262,7 @@ const I = { branch: '', room: '', rooms: [], view: 'day', day: ymd(new Date()), 
 startApp(function () {
   const b = S.boot;
   if (!b.branches.length) return fatal('ยังไม่มีข้อมูลสาขา', 'กรุณาเพิ่มสาขาในชีต Branches (สถานะ Active)');
-  setupTabs([['book', 'จองห้อง'], ['board', 'สถานะห้อง'], ['list', 'รายการ'], ['adc', 'Admit/DC', b.isNurse], ['cal', 'ปฏิทิน']], BOOT.page);
+  setupTabs([['book', 'จองห้อง'], ['board', 'สถานะห้อง'], ['list', 'รายการ'], ['adc', 'Admit/DC', false], ['cal', 'ปฏิทิน']], BOOT.page);
   $('booker').value = S.user.name;
   $('inDate').min = b.today; $('outDate').min = b.today;
   $('inDate').value = b.today; $('inTime').value = '14:00';
